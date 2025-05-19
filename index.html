@@ -30,6 +30,28 @@
                 <div id="choropleth-map-container" class="chart"></div>
             </div>
         </section>
+
+        <!-- New controls section for Bracket Explorer -->
+        <section class="controls">
+            <div class="filter-container">
+                <label for="bracket-year-slider">Year:</label>
+                <input type="range" id="bracket-year-slider" name="bracket-year" />
+                <span id="bracket-year-display"></span>
+                <label for="bracket-gender-select">Gender:</label>
+                <select id="bracket-gender-select">
+                    <option value="m">Men</option>
+                    <option value="w">Women</option>
+                </select>
+            </div>
+        </section>
+
+        <!-- Bracket Explorer visualization under map -->
+        <section class="visualizations">
+            <div class="chart-container">
+                <h2 id="bracket-title">Road to the Title Bracket Explorer</h2>
+                <div id="bracket-container" class="chart"></div>
+            </div>
+        </section>
     </main>
 
     <footer>

@@ -115,6 +115,57 @@ header h1 {
     margin-top: 5px;
 }
 
+/* Bracket Explorer Specific Styles */
+#bracket-container {
+    min-height: 600px; /* Maintain a decent default size */
+    height: auto;      /* Allow it to grow with the bracket content */
+    overflow-y: auto;  /* Add a vertical scrollbar if the bracket is too tall */
+    overflow-x: auto;  /* Add a horizontal scrollbar if bracket is too wide */
+}
+
+.bracket-tooltip ul {
+    list-style-type: none;
+    padding-left: 10px;
+    font-size: 0.9em;
+}
+
+.bracket-tooltip li {
+    margin-bottom: 2px;
+}
+
+.links path {
+    fill: none;
+    stroke: #ccc;
+    stroke-width: 1.5px;
+}
+
+.nodes circle {
+    stroke: #333;
+    stroke-width: 1.5px;
+}
+
+.nodes text {
+    font-size: 10px;
+    cursor: default; /* Indicate text is not directly interactive for path, but node is */
+}
+
+/* Highlighting for player path */
+.node.highlighted circle {
+  fill: #ffdd57 !important; /* A gold/yellow color */
+  stroke: #ffae00 !important; /* An orange color for border */
+  stroke-width: 2.5px !important;
+}
+
+.node.highlighted text {
+  font-weight: bold !important;
+  fill: #d95f02 !important; /* Darker orange for text */
+}
+
+.link.highlighted {
+  stroke: #ffae00 !important; /* Orange color for path */
+  stroke-width: 2.5px !important;
+}
+
 /* Footer */
 footer {
     text-align: center;
