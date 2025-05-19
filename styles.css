@@ -79,7 +79,7 @@ header h1 {
 
 .chart {
     width: 100%;
-    height: 400px;
+    height: 600px; /* Increased height for map */
 }
 
 /* Tooltip Styles */
@@ -93,6 +93,26 @@ header h1 {
     font-size: 12px;
     max-width: 200px;
     z-index: 10;
+}
+
+.country {
+    stroke: #fff;
+    stroke-width: 0.5px;
+    transition: fill 0.3s ease;
+}
+
+.country:hover {
+    fill-opacity: 0.7;
+}
+
+#year-slider {
+    width: 300px;
+}
+
+.tooltip-sparkline {
+    width: 150px;
+    height: 50px;
+    margin-top: 5px;
 }
 
 /* Footer */

@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="styles.css">
     <!-- D3.js library -->
     <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
 </head>
 <body>
     <header>
@@ -17,40 +18,16 @@
     <main>
         <section class="controls">
             <div class="filter-container">
-                <label for="year-filter">Filter by Year:</label>
-                <select id="year-filter">
-                    <option value="all">All Years</option>
-                    <!-- Will be populated dynamically -->
-                </select>
-
-                <label for="gender-filter">Filter by Gender:</label>
-                <select id="gender-filter">
-                    <option value="all">All</option>
-                    <option value="m">Men</option>
-                    <option value="f" disabled>Women (No data available)</option>
-                </select>
+                <label for="year-slider">Year:</label>
+                <input type="range" id="year-slider" name="year" />
+                <span id="year-display"></span>
             </div>
         </section>
 
         <section class="visualizations">
             <div class="chart-container">
-                <h2>Match Statistics</h2>
-                <div id="match-stats-chart" class="chart"></div>
-            </div>
-
-            <div class="chart-container">
-                <h2>Player Performance</h2>
-                <div id="player-performance-chart" class="chart"></div>
-            </div>
-
-            <div class="chart-container">
-                <h2>Serve Analysis</h2>
-                <div id="serve-analysis-chart" class="chart"></div>
-            </div>
-
-            <div class="chart-container">
-                <h2>Country Representation</h2>
-                <div id="country-chart" class="chart"></div>
+                <h2>Global Dominance</h2>
+                <div id="choropleth-map-container" class="chart"></div>
             </div>
         </section>
     </main>
