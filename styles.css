@@ -186,3 +186,150 @@ footer {
         height: 300px;
     }
 }
+
+/* Head-to-Head Radar Duel Styles */
+#radar-duel-section {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #282c34; /* Dark background for the section */
+    border-radius: 8px;
+    color: #f0f0f0;
+}
+
+#radar-duel-section h2 {
+    text-align: center;
+    color: #61dafb; /* Accent color for heading */
+    margin-bottom: 20px;
+}
+
+.radar-controls {
+    display: flex;
+    justify-content: space-around; /* Distribute controls evenly */
+    align-items: center;
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: #3a3f47; /* Slightly lighter background for controls */
+    border-radius: 6px;
+    flex-wrap: wrap; /* Allow controls to wrap on smaller screens */
+}
+
+.radar-controls .player-search-container,
+.radar-controls .radar-options-container {
+    display: flex;
+    flex-direction: column; /* Stack label and input/checkbox */
+    align-items: center; /* Center items within their container */
+    margin: 10px; /* Add some margin around each control group */
+}
+
+.radar-controls label {
+    margin-bottom: 8px; /* Space between label and input/checkbox */
+    font-size: 0.9em;
+    color: #c5c8c6; /* Lighter text for labels */
+}
+
+.radar-controls input[type="text"],
+.radar-controls input[type="search"] { /* Added type="search" for consistency */
+    padding: 8px 10px;
+    border: 1px solid #555;
+    border-radius: 4px;
+    background-color: #2c3037; /* Darker input background */
+    color: #f0f0f0;
+    font-size: 0.9em;
+    width: 180px; /* Fixed width for search inputs */
+}
+
+.radar-controls input[type="text"]:focus,
+.radar-controls input[type="search"]:focus {
+    outline: none;
+    border-color: #61dafb; /* Accent color on focus */
+    box-shadow: 0 0 5px rgba(97, 218, 251, 0.5);
+}
+
+.radar-controls .radar-options-container div { /* Target divs inside options for checkbox layout */
+    display: flex;
+    align-items: center; /* Align checkbox and its label */
+    margin-top: 5px; /* Space between options if they stack */
+}
+
+.radar-controls input[type="checkbox"] {
+    margin-right: 8px; /* Space between checkbox and its label text */
+    accent-color: #61dafb; /* Style the checkbox itself */
+}
+
+#radar-chart-area {
+    display: flex;
+    justify-content: space-around; /* Space out the two radar charts */
+    align-items: flex-start; /* Align charts to the top */
+    flex-wrap: wrap; /* Allow charts to wrap on smaller screens */
+    margin-top: 20px;
+}
+
+#radar-playerA-container,
+#radar-playerB-container {
+    /* Each container will hold one radar chart SVG */
+    /* SVG specific styles will be handled by D3 or more specific selectors */
+    /* background-color: #3a3f47; */ /* Optional: if you want a distinct bg for each chart */
+    /* border-radius: 6px; */
+    /* padding: 10px; */
+    margin: 10px; /* Add some margin around each chart container */
+}
+
+/* Styles for the radar chart elements (lines, polygons, text) */
+.radar-chart .axis .line {
+    stroke: #ccc; /* Light grey for axis lines */
+    stroke-width: 1px;
+}
+
+.radar-chart .axis .legend {
+    font-family: 'Arial', sans-serif;
+    font-size: 10px; /* Smaller font for axis labels */
+    fill: #f0f0f0; /* Light text color for labels */
+    text-anchor: middle;
+}
+
+.radar-chart .grid-circle {
+    fill: #4a4e55; /* Darker grid circles */
+    stroke: #5a5e65; /* Slightly lighter stroke for grid circles */
+    fill-opacity: 0.2; /* More subtle fill */
+}
+
+.radar-chart .axis-label-level {
+    font-size: 9px; /* Smaller font for level labels */
+    fill: #a0a0a0; /* Greyed out text for percentage levels */
+}
+
+.radar-tooltip-values text {
+    font-family: 'Arial', sans-serif;
+    font-size: 9px;
+    fill: #e0e0e0; /* Bright for visibility */
+    text-shadow: 1px 1px 1px #1a1a1a; /* Slight shadow for readability */
+}
+
+
+/* Pulse animation for overlapping areas in mirror mode */
+.pulse-animation {
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+        opacity: 0.35; /* Match base opacity of primary blob */
+    }
+    50% {
+        transform: scale(1.03); /* Slightly larger */
+        opacity: 0.6; /* More opaque */
+    }
+    100% {
+        transform: scale(1);
+        opacity: 0.35;
+    }
+}
+
+/* Ensure the SVG text elements are selectable for debugging but not by default user interaction */
+svg text {
+    -webkit-user-select: none; /* Safari */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* IE10+/Edge */
+    user-select: none; /* Standard */
+}

@@ -54,6 +54,40 @@
         </section>
     </main>
 
+    <!-- New Section for Head-to-Head Radar Duel -->
+    <section id="radar-duel-section" class="visualizations">
+        <div class="chart-container">
+            <h2>Head-to-Head Radar Duel</h2>
+            <div class="radar-controls controls">
+                <div class="player-select-container">
+                    <label for="playerA-select">Player A:</label>
+                    <input type="text" id="playerA-select" list="playerA-datalist" placeholder="Search Player A">
+                    <datalist id="playerA-datalist"></datalist>
+                </div>
+                <div class="player-select-container">
+                    <label for="playerB-select">Player B:</label>
+                    <input type="text" id="playerB-select" list="playerB-datalist" placeholder="Search Player B">
+                    <datalist id="playerB-datalist"></datalist>
+                </div>
+                <div class="radar-options">
+                    <label>
+                        <input type="checkbox" id="radar-mirror-mode">
+                        Mirror Mode (Pulse Overlaps)
+                    </label>
+                    <label>
+                        <input type="checkbox" id="radar-baseline-switch">
+                        Baseline: Only Head-to-Head Matches
+                    </label>
+                </div>
+            </div>
+            <div id="radar-chart-area" class="chart">
+                <!-- Radar charts will be drawn here by D3.js -->
+                <div id="radar-playerA-container"></div>
+                <div id="radar-playerB-container"></div>
+            </div>
+        </div>
+    </section>
+
     <footer>
         <p>Data Visualization Assignment - Australian Open Tennis Matches</p>
     </footer>

@@ -6,6 +6,23 @@ let tennisData = [];
 let winsByCountryByYear = {};
 let years = [];
 
+// --- BEGIN Radar Duel Variables ---
+let allPlayerNames = []; // To be populated after data load
+const radarChartWidth = 380; // Width for each radar chart SVG - Increased from 300
+const radarChartHeight = 380; // Height for each radar chart SVG - Increased from 300
+const radarMargin = { top: 70, right: 70, bottom: 70, left: 70 }; // Increased margins for labels
+const radarEffectiveWidth = radarChartWidth - radarMargin.left - radarMargin.right;
+const radarEffectiveHeight = radarChartHeight - radarMargin.top - radarMargin.bottom;
+
+const radarChartStatsMeta = [
+    { axis: "1st Srv %", key: "firstServe", unit: "%", max: 1.0, isPercentage: true },
+    { axis: "Aces", key: "ace", unit: "avg", max: 20, isPercentage: false }, // Corrected key: "ace"
+    { axis: "DFs", key: "double", unit: "avg", max: 10, isPercentage: false }, // Corrected key: "double"
+    { axis: "BP Conv %", key: "break", unit: "%", max: 1.0, isPercentage: true }, // Corrected key: "break"
+    { axis: "Net Pts Won %", key: "net", unit: "%", max: 1.0, isPercentage: true } // Corrected key: "net"
+];
+// --- END Radar Duel Variables ---
+
 // Map dimensions
 const mapWidth = 960; // Renamed for clarity
 const mapHeight = 600; // Renamed for clarity
@@ -46,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
   ]).then(([data, world]) => {
     tennisData = data;
     processData(); // Populates 'years' array
+    allPlayerNames = extractAllPlayerNames(tennisData); // Extract player names
 
     // Choropleth Map
     initMap(world);
@@ -59,6 +77,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (years.length > 0) {
       renderBracket(years[0], 'm'); // Default to first year, men's
     }
+
+    // Radar Duel
+    initRadarDuelControls();
+    updateRadarDuelVisualization(); // Initial call
 
   }).catch(console.error);
 });
@@ -670,3 +692,399 @@ function showBracketTooltip(event, data) {
 function hideBracketTooltip() {
     bracketTooltip.transition().duration(500).style('opacity', 0);
 }
+
+// --- BEGIN Radar Duel Functions ---
+
+function extractAllPlayerNames(data) {
+    const playerSet = new Set();
+    data.forEach(d => {
+        if (d.player1 && d.player1.trim() !== "") playerSet.add(d.player1.trim());
+        if (d.player2 && d.player2.trim() !== "") playerSet.add(d.player2.trim());
+    });
+    return Array.from(playerSet).sort();
+}
+
+function initRadarDuelControls() {
+    const playerADataList = d3.select('#playerA-datalist'); // Corrected based on HTML
+    const playerBDataList = d3.select('#playerB-datalist'); // Corrected based on HTML
+
+    allPlayerNames.forEach(name => {
+        playerADataList.append('option').attr('value', name);
+        playerBDataList.append('option').attr('value', name);
+    });
+
+    // Corrected IDs to match index.html
+    d3.select('#playerA-select').on('input', updateRadarDuelVisualization);
+    d3.select('#playerB-select').on('input', updateRadarDuelVisualization);
+    d3.select('#radar-mirror-mode').on('change', updateRadarDuelVisualization);
+    d3.select('#radar-baseline-switch').on('change', updateRadarDuelVisualization);
+
+    // Setup SVGs for radar charts
+    d3.select('#radar-playerA-container').append('svg')
+        .attr('width', radarChartWidth)
+        .attr('height', radarChartHeight)
+        .append('g')
+        .attr('class', 'radar-g')
+        .attr('transform', `translate(${radarMargin.left},${radarMargin.top})`);
+
+    d3.select('#radar-playerB-container').append('svg')
+        .attr('width', radarChartWidth)
+        .attr('height', radarChartHeight)
+        .append('g')
+        .attr('class', 'radar-g')
+        .attr('transform', `translate(${radarMargin.left},${radarMargin.top})`);
+}
+
+function calculateAverageRadarStats(playerName, relevantMatches) {
+    if (!playerName || relevantMatches.length === 0) {
+        return radarChartStatsMeta.map(statMeta => ({
+            axis: statMeta.axis,
+            value: 0,
+            original_value: 0 // Keep original_value for tooltips
+        }));
+    }
+
+    const aggregatedStats = {};
+    radarChartStatsMeta.forEach(statMeta => {
+        aggregatedStats[statMeta.key] = [];
+    });
+
+    relevantMatches.forEach(match => {
+        const playerSuffix = match.player1 === playerName ? '1' : (match.player2 === playerName ? '2' : null);
+        if (!playerSuffix) return;
+
+        radarChartStatsMeta.forEach(statMeta => {
+            const rawStatValue = match[statMeta.key + playerSuffix];
+            let parsedValue;
+            if (statMeta.isPercentage) {
+                parsedValue = parsePercentage(rawStatValue); // Already handles "N/A" or invalid by returning null
+            } else {
+                parsedValue = parseInt(rawStatValue);
+            }
+            // Ensure parsedValue is a valid number before pushing
+            if (parsedValue !== null && !isNaN(parsedValue)) {
+                aggregatedStats[statMeta.key].push(parsedValue);
+            }
+        });
+    });
+
+    const averagedStatsData = radarChartStatsMeta.map(statMeta => {
+        const values = aggregatedStats[statMeta.key];
+        let average = 0;
+        if (values.length > 0) {
+            average = values.reduce((sum, val) => sum + val, 0) / values.length;
+        }
+        // Value is the actual average. Scaling/Normalization happens during drawing.
+        return { axis: statMeta.axis, value: average, original_value: average };
+    });
+    return averagedStatsData;
+}
+
+function updateRadarDuelVisualization() {
+    // Corrected IDs to match index.html
+    const playerAInputElement = document.getElementById('playerA-select');
+    const playerBInputElement = document.getElementById('playerB-select');
+    const mirrorModeCheckboxElement = document.getElementById('radar-mirror-mode');
+    const h2hBaselineCheckboxElement = document.getElementById('radar-baseline-switch');
+
+    let playerAName = "";
+    let playerBName = "";
+    let mirrorMode = false;
+    let useH2HBaseline = false;
+
+    if (playerAInputElement) {
+        playerAName = playerAInputElement.value;
+    } else {
+        console.error("Radar Duel Error: HTML element with ID 'playerA-select' not found. Please check index.html.");
+    }
+
+    if (playerBInputElement) {
+        playerBName = playerBInputElement.value;
+    } else {
+        console.error("Radar Duel Error: HTML element with ID 'playerB-select' not found. Please check index.html.");
+    }
+
+    if (mirrorModeCheckboxElement) {
+        mirrorMode = mirrorModeCheckboxElement.checked;
+    } else {
+        console.error("Radar Duel Error: HTML element with ID 'radar-mirror-mode' not found. Please check index.html.");
+    }
+
+    if (h2hBaselineCheckboxElement) {
+        useH2HBaseline = h2hBaselineCheckboxElement.checked;
+    } else {
+        console.error("Radar Duel Error: HTML element with ID 'radar-baseline-switch' not found. Please check index.html.");
+    }
+
+    // const playerAName = d3.select('#playerA-search').property('value'); // Original problematic line
+    // const playerBName = d3.select('#playerB-search').property('value');
+    // const mirrorMode = d3.select('#mirror-mode-checkbox').property('checked');
+    // const useH2HBaseline = d3.select('#h2h-baseline-checkbox').property('checked');
+
+    let matchesForA = playerAName ? tennisData.filter(m => m.player1 === playerAName || m.player2 === playerAName) : [];
+    let matchesForB = playerBName ? tennisData.filter(m => m.player1 === playerBName || m.player2 === playerBName) : [];
+
+    let h2hStatusMsgA = "";
+    let h2hStatusMsgB = "";
+
+    if (useH2HBaseline && playerAName && playerBName && playerAName !== playerBName) {
+        const h2hMatches = tennisData.filter(m =>
+            (m.player1 === playerAName && m.player2 === playerBName) ||
+            (m.player1 === playerBName && m.player2 === playerAName)
+        );
+        if (h2hMatches.length > 0) {
+            matchesForA = h2hMatches;
+            matchesForB = h2hMatches;
+        } else {
+            matchesForA = []; // No H2H matches found
+            matchesForB = [];
+            h2hStatusMsgA = "No H2H data.";
+            h2hStatusMsgB = "No H2H data.";
+        }
+    } else if (useH2HBaseline && playerAName && playerBName && playerAName === playerBName) {
+        // Edge case: H2H with self doesn't make sense, use all matches.
+        // Or display a message. For now, implicitly uses all matches as h2hMatches would be empty.
+        h2hStatusMsgA = "H2H with self not applicable.";
+        h2hStatusMsgB = "H2H with self not applicable.";
+    }
+
+
+    const statsA = playerAName ? calculateAverageRadarStats(playerAName, matchesForA) : getDefaultRadarData();
+    const statsB = playerBName ? calculateAverageRadarStats(playerBName, matchesForB) : getDefaultRadarData();
+
+    drawRadarChart('#radar-playerA-container', playerAName, statsA, playerBName ? statsB : null, mirrorMode, h2hStatusMsgA);
+    drawRadarChart('#radar-playerB-container', playerBName, statsB, playerAName ? statsA : null, mirrorMode, h2hStatusMsgB);
+}
+
+function getDefaultRadarData() {
+    return radarChartStatsMeta.map(statMeta => ({
+        axis: statMeta.axis,
+        value: 0,
+        original_value: 0
+    }));
+}
+
+function drawRadarChart(containerSelector, playerName, primaryPlayerData, secondaryPlayerData, mirrorMode, statusMessage) {
+    const g = d3.select(containerSelector).select('svg').select('.radar-g');
+    g.selectAll('*').remove(); // Clear previous chart elements
+
+    const noDataForPlayer = primaryPlayerData.every(d => d.original_value === 0);
+
+    if (!playerName || (noDataForPlayer && !statusMessage) ) {
+        g.append('text')
+            .attr('x', radarEffectiveWidth / 2)
+            .attr('y', radarEffectiveHeight / 2)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '12px')
+            .text(playerName && noDataForPlayer ? 'No data for selection.' : 'Select a player.');
+        return;
+    }
+     if (statusMessage) {
+        g.append('text')
+            .attr('x', radarEffectiveWidth / 2)
+            .attr('y', radarEffectiveHeight / 2)
+            .attr('text-anchor', 'middle')
+            .style('font-size', '12px')
+            .text(statusMessage);
+        // If there's a status message (like "No H2H data"), we might not want to draw the chart,
+        // or draw it greyed out. For now, it will show the message and an empty chart if noDataForPlayer is also true.
+        if (noDataForPlayer && playerName) return; // Don't draw chart if no data and specific message shown
+    }
+
+
+    const levels = 5;
+    const angleSlice = Math.PI * 2 / radarChartStatsMeta.length;
+
+    const rScale = d3.scaleLinear()
+        .range([0, Math.min(radarEffectiveWidth / 2, radarEffectiveHeight / 2)])
+        .domain([0, 1]); // Domain is 0 to 1 because values will be normalized (value / statMeta.max)
+
+    const gridWrapper = g.append('g')
+      .attr('class', 'grid-wrapper')
+      .attr('transform', `translate(${radarEffectiveWidth/2}, ${radarEffectiveHeight/2})`);
+
+    gridWrapper.selectAll('.levels')
+        .data(d3.range(1, levels + 1).reverse())
+        .enter()
+        .append('circle')
+        .attr('class', 'grid-circle')
+        .attr('r', d => d * rScale(1) / levels) // rScale(1) is max radius
+        .style('fill', '#CDCDCD')
+        .style('stroke', '#CDCDCD')
+        .style('fill-opacity', 0.1);
+
+    gridWrapper.selectAll(".axis-label-level")
+       .data(d3.range(1, levels).reverse()) // Don't label the center 0%
+       .enter().append("text")
+       .attr("class", "axis-label-level")
+       .attr("x", 4)
+       .attr("y", d => -(d * rScale(1) / levels))
+       .attr("dy", "0.4em")
+       .style("font-size", "8px")
+       .attr("fill", "#737373")
+       .text(d => `${(100 * d / levels).toFixed(0)}%`);
+
+    const axisGrid = g.append('g').attr('class', 'axis-wrapper')
+        .attr('transform', `translate(${radarEffectiveWidth/2}, ${radarEffectiveHeight/2})`);
+
+    const axes = axisGrid.selectAll('.axis')
+        .data(radarChartStatsMeta)
+        .enter()
+        .append('g')
+        .attr('class', 'axis');
+
+    axes.append('line')
+        .attr('x1', 0)
+        .attr('y1', 0)
+        .attr('x2', (d, i) => rScale(1) * Math.cos(angleSlice * i - Math.PI / 2))
+        .attr('y2', (d, i) => rScale(1) * Math.sin(angleSlice * i - Math.PI / 2))
+        .attr('class', 'line')
+        .style('stroke', 'white')
+        .style('stroke-width', '1px');
+
+    axes.append('text')
+        .attr('class', 'legend')
+        .style('font-size', '9px') // Slightly smaller
+        .attr('text-anchor', 'middle')
+        .attr('dy', '0.35em')
+        .attr('x', (d, i) => rScale(1 * 1.15) * Math.cos(angleSlice * i - Math.PI / 2)) // Adjusted for new margin
+        .attr('y', (d, i) => rScale(1 * 1.15) * Math.sin(angleSlice * i - Math.PI / 2))
+        .text(d => d.axis)
+        .call(wrapText, radarMargin.left * 0.8); // Adjust wrap width based on margin
+
+    const radarLine = d3.lineRadial()
+        .angle((d, i) => i * angleSlice)
+        .radius(d => {
+            const meta = radarChartStatsMeta.find(m => m.axis === d.axis);
+            if (!meta || meta.max === 0) return 0; // Avoid division by zero
+            return rScale(Math.min(d.value / meta.max, 1)); // Ensure normalized value doesn't exceed 1
+        })
+        .curve(d3.curveLinearClosed);
+
+    function plotPlayerData(data, className, color, baseOpacity, strokeWidth = "2px") {
+        const plotData = data.map(stat => { // Ensure data is in correct order of radarChartStatsMeta
+            const meta = radarChartStatsMeta.find(m => m.axis === stat.axis);
+            return {...stat, statMeta: meta}; // Pass meta for normalization if needed, though done in radius
+        });
+         // Sort data to match radarChartStatsMeta order for consistent polygon shape
+        const orderedPlotData = radarChartStatsMeta.map(meta => {
+            return plotData.find(p => p.axis === meta.axis) || {axis: meta.axis, value: 0, original_value: 0, statMeta: meta};
+        });
+
+
+        const blobWrapper = g.selectAll('.' + className)
+            .data([orderedPlotData]);
+
+        blobWrapper.enter().append('path')
+            .attr('class', className + ' radar-area')
+            .attr('transform', `translate(${radarEffectiveWidth/2}, ${radarEffectiveHeight/2})`)
+            .merge(blobWrapper)
+            .attr('d', radarLine)
+            .style('fill', color)
+            .style('fill-opacity', baseOpacity)
+            .style('stroke', color)
+            .style('stroke-width', strokeWidth);
+
+        blobWrapper.exit().remove();
+        return g.select('.' + className); // Return the path selection
+    }
+
+    let primaryPath;
+    if (playerName && !noDataForPlayer) {
+       primaryPath = plotPlayerData(primaryPlayerData, 'primary-blob', 'steelblue', 0.35);
+    }
+
+
+    if (mirrorMode && secondaryPlayerData && secondaryPlayerData.some(d => d.original_value > 0)) {
+        plotPlayerData(secondaryPlayerData, 'secondary-blob', 'rgba(200,0,0,0.6)', 0.20, "1.5px");
+
+        if (primaryPath && primaryPath.node()) {
+            let primaryIsStronger = false;
+            for(let i=0; i < primaryPlayerData.length; i++) {
+                const pMeta = radarChartStatsMeta.find(m => m.axis === primaryPlayerData[i].axis);
+                const sMeta = radarChartStatsMeta.find(m => m.axis === secondaryPlayerData[i].axis);
+                if (!pMeta || !sMeta) continue;
+
+                const pValNormalized = pMeta.max > 0 ? primaryPlayerData[i].value / pMeta.max : 0;
+                const sValNormalized = sMeta.max > 0 ? secondaryPlayerData[i].value / sMeta.max : 0;
+
+                // For DFs, lower is better. For others, higher is better.
+                if (primaryPlayerData[i].axis === "DFs") {
+                    if (pValNormalized < sValNormalized) { primaryIsStronger = true; break; }
+                } else {
+                    if (pValNormalized > sValNormalized) { primaryIsStronger = true; break; }
+                }
+            }
+            // primaryPath.classed('pulse-animation', primaryIsStronger); // Temporarily commented out for diagnosis
+            console.log('Pulse animation class application temporarily disabled for diagnosis.');
+        }
+    } else {
+        g.selectAll('.secondary-blob').remove();
+        if (primaryPath) primaryPath.classed('pulse-animation', false);
+    }
+
+    g.append("text")
+        .attr("x", radarEffectiveWidth / 2)
+        .attr("y", -radarMargin.top / 2 - 5) // Adjusted y position
+        .attr("text-anchor", "middle")
+        .style("font-size", "14px")
+        .style("font-weight", "bold")
+        .text(playerName || "");
+
+    if (playerName && !noDataForPlayer) {
+        const tooltipGroup = g.append("g").attr("class", "radar-tooltip-values")
+                              .attr('transform', `translate(${radarEffectiveWidth/2}, ${radarEffectiveHeight/2})`);
+
+        const orderedPrimaryData = radarChartStatsMeta.map(meta => {
+            return primaryPlayerData.find(p => p.axis === meta.axis) || {axis: meta.axis, value: 0, original_value: 0};
+        });
+
+        orderedPrimaryData.forEach((d, i) => {
+            const meta = radarChartStatsMeta.find(m => m.axis === d.axis);
+            if (!meta) return;
+            const normalizedValue = meta.max > 0 ? Math.min(d.value / meta.max, 1) : 0;
+
+            const x = rScale(normalizedValue * 1.05) * Math.cos(angleSlice * i - Math.PI / 2); // Slightly outside point
+            const y = rScale(normalizedValue * 1.05) * Math.sin(angleSlice * i - Math.PI / 2);
+
+            tooltipGroup.append("text")
+                .attr("x", x)
+                .attr("y", y)
+                .attr("dy", (angleSlice * i - Math.PI / 2 > 0 && angleSlice * i - Math.PI / 2 < Math.PI) ? "1em" : "-0.2em")
+                .style("font-size", "9px")
+                .attr("text-anchor", "middle")
+                .text(meta.isPercentage ? (d.original_value * 100).toFixed(0) + "%" : d.original_value.toFixed(1));
+        });
+    }
+}
+
+function wrapText(text, width) {
+  text.each(function() {
+    var text = d3.select(this),
+        words = text.text().split(/\\s+/).reverse(),
+        word,
+        line = [],
+        lineNumber = 0,
+        lineHeight = 1.1, // ems
+        x = text.attr("x"), // Keep original x
+        y = text.attr("y"), // Keep original y
+        dy = parseFloat(text.attr("dy") || 0), // Ensure dy is a number
+        tspan = text.text(null).append("tspan").attr("x", x).attr("y", y).attr("dy", dy + "em");
+
+    // Handle cases where text might be empty or just one word
+    if (words.length === 1 && words[0] === "") return;
+    if (words.length === 0 && text.text() !== "") words = [text.text()]; // If text was set before .call(wrapText)
+
+    while (word = words.pop()) {
+      line.push(word);
+      tspan.text(line.join(" "));
+      if (tspan.node().getComputedTextLength() > width && line.length > 1) { // only wrap if more than one word in line
+        line.pop();
+        tspan.text(line.join(" "));
+        line = [word];
+        tspan = text.append("tspan").attr("x", x).attr("y", y).attr("dy", ++lineNumber * lineHeight + dy + "em").text(word);
+      }
+    }
+  });
+}
+// --- END Radar Duel Functions ---
