@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Australian Open Tennis Matches (10 Year Analysis)</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- D3.js library -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Australian Open Tennis Matches Visualization</h1>
+        <p>Data analysis of Australian Open matches over a 10-year period</p>
+    </header>
+
+    <main>
+        <section class="controls">
+            <div class="filter-container">
+                <label for="year-filter">Filter by Year:</label>
+                <select id="year-filter">
+                    <option value="all">All Years</option>
+                    <!-- Will be populated dynamically -->
+                </select>
+
+                <label for="gender-filter">Filter by Gender:</label>
+                <select id="gender-filter">
+                    <option value="all">All</option>
+                    <option value="m">Men</option>
+                    <option value="f" disabled>Women (No data available)</option>
+                </select>
+            </div>
+        </section>
+
+        <section class="visualizations">
+            <div class="chart-container">
+                <h2>Match Statistics</h2>
+                <div id="match-stats-chart" class="chart"></div>
+            </div>
+
+            <div class="chart-container">
+                <h2>Player Performance</h2>
+                <div id="player-performance-chart" class="chart"></div>
+            </div>
+
+            <div class="chart-container">
+                <h2>Serve Analysis</h2>
+                <div id="serve-analysis-chart" class="chart"></div>
+            </div>
+
+            <div class="chart-container">
+                <h2>Country Representation</h2>
+                <div id="country-chart" class="chart"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Data Visualization Assignment - Australian Open Tennis Matches</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>
